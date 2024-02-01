@@ -21,10 +21,16 @@ JsonElement *parseValue();
 static auto source = R"(
 {
     "hello": "world",
-    "foo": 2.01
+    "foo": 1.01,
+    "urgent":    True,
+    "expensive":    False,
 }
 )";
 
+// "hello": "world",
+// "foo" : 2.01,
+// "urgent": true,
+// "expensive" : False
 // "foo": 1.0,
 // "bar": true,
 // "baz": null
@@ -40,7 +46,7 @@ void skipSpace() {
 
 bool checkError(char c) {
   if (source[i] != c) {
-    std::cout << "error" << std::endl;
+    std::cout << "error for " << c << std::endl;
     return false;
   }
   return true;
@@ -70,11 +76,24 @@ JsonElement *parseString() {
   return new JsonElement(JsonElement::Type::STRING, str);
 }
 
-void parseBoolean() {
-  while (source[i] != ',') {
+JsonElement *parseBoolean() {
+  skipSpace();
+  std::string str;
+  str += source[i++];
+  while (source[i] >= 'a' && source[i] <= 'z') {
+    str += source[i];
     i++;
   }
+  std::cout << str << std::endl;
   i++;
+  if (str == "true" || str == "True") {
+    return new JsonElement(JsonElement::Type::BOOLEAN, true);
+  } else if (str == "false" || str == "False") {
+    return new JsonElement(JsonElement::Type::BOOLEAN, false);
+  } else {
+    std::cout << "bad input" << std::endl;
+    return nullptr;
+  }
 }
 
 void parseNull() {
@@ -110,23 +129,24 @@ JsonElement *parseObject() {
 
   JsonElement *json_element =
       new JsonElement(JsonElement::Type::OBJECT, JsonElement::JsonObject());
+
   while (source[i] != '}') {
+    std::cout << source[i] << std::endl;
     auto key = std::get<std::string>(parseString()->value_);
+    // std::cout << "key is:" << key;
     auto value = parseValue();
-    // std::cout << key << " " << std::get<std::string>(value->value_)
-    //           << std::endl;
+    // std::cout << std::get<std::string>(value->value_) << std::endl;
+    // std::cout << std::get<bool>(value->value_) << std::endl;
     std::get<JsonElement::JsonObject>(json_element->value_)[key] = value;
     skipSpace();
   }
   i++;
+
   return json_element;
 }
 
 JsonElement *parseValue() {
   skipSpace();
-  if (source[i] == 2) {
-    return nullptr;
-  }
   switch (source[i]) {
   case '{':
     return parseObject();
@@ -137,10 +157,12 @@ JsonElement *parseValue() {
     return parseString();
   // use multiple case values without using a break between them.
   case 't':
+  case 'T':
   case 'f':
-    // return parseBoolean();
-    break;
+  case 'F':
+    return parseBoolean();
   case 'n':
+    return nullptr;
     // return parseNull();
   default:
     return parseNumber();
@@ -155,5 +177,10 @@ signed main() {
             << std::endl;
   auto json_element_num = json_element_str["foo"];
   std::cout << std::get<double>(json_element_num->value_) << std::endl;
+  auto json_element_true = json_element_str["urgent"];
+  std::cout << std::get<bool>(json_element_true->value_) << std::endl;
+  auto json_element_false = json_element_str["expensive"];
+  std::cout << std::get<bool>(json_element_false->value_) << std::endl;
+
   return 0;
 }
