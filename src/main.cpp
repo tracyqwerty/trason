@@ -24,6 +24,12 @@ static auto source = R"(
     "foo": 1.01,
     "urgent":    True,
     "expensive":    False,
+    "bazzzz": null,
+    "animals": [
+        "dog",
+        "cat",
+        "penguin"
+    ],
 }
 )";
 
@@ -52,11 +58,25 @@ bool checkError(char c) {
   return true;
 }
 
-void parseArray() {
+JsonElement *parseArray() {
+  skipSpace();
+  if (!checkError('[')) {
+    return nullptr;
+  } else {
+    i++;
+  }
+
+  JsonElement *json_element =
+      new JsonElement(JsonElement::Type::ARRAY, JsonElement::JsonArray());
+
   while (source[i] != ']') {
-    // parseValue();
+    auto value = parseValue();
+    std::get<JsonElement::JsonArray>(json_element->value_).emplace_back(value);
+    skipSpace();
   }
   i++;
+
+  return json_element;
 }
 
 JsonElement *parseString() {
@@ -84,7 +104,7 @@ JsonElement *parseBoolean() {
     str += source[i];
     i++;
   }
-  std::cout << str << std::endl;
+  // std::cout << str << std::endl;
   i++;
   if (str == "true" || str == "True") {
     return new JsonElement(JsonElement::Type::BOOLEAN, true);
@@ -96,11 +116,22 @@ JsonElement *parseBoolean() {
   }
 }
 
-void parseNull() {
-  while (source[i] != ',') {
+JsonElement *parseNull() {
+  skipSpace();
+  std::string str;
+  str += source[i++];
+  while (source[i] >= 'a' && source[i] <= 'z') {
+    str += source[i];
     i++;
   }
+  // std::cout << str << std::endl;
   i++;
+  if (str == "null" || str == "NULL") {
+    return new JsonElement(JsonElement::Type::NULL_VALUE, false);
+  } else {
+    std::cout << "bad input" << std::endl;
+    return nullptr;
+  }
 }
 
 JsonElement *parseNumber() {
@@ -131,7 +162,6 @@ JsonElement *parseObject() {
       new JsonElement(JsonElement::Type::OBJECT, JsonElement::JsonObject());
 
   while (source[i] != '}') {
-    std::cout << source[i] << std::endl;
     auto key = std::get<std::string>(parseString()->value_);
     // std::cout << "key is:" << key;
     auto value = parseValue();
@@ -151,8 +181,7 @@ JsonElement *parseValue() {
   case '{':
     return parseObject();
   case '[':
-    // return parseArray();
-    break;
+    return parseArray();
   case '"':
     return parseString();
   // use multiple case values without using a break between them.
@@ -162,8 +191,8 @@ JsonElement *parseValue() {
   case 'F':
     return parseBoolean();
   case 'n':
-    return nullptr;
-    // return parseNull();
+  case 'N':
+    return parseNull();
   default:
     return parseNumber();
   }
@@ -181,6 +210,14 @@ signed main() {
   std::cout << std::get<bool>(json_element_true->value_) << std::endl;
   auto json_element_false = json_element_str["expensive"];
   std::cout << std::get<bool>(json_element_false->value_) << std::endl;
+  auto json_element_null = json_element_str["bazzzz"];
+  std::cout << std::get<bool>(json_element_null->value_) << std::endl;
+
+  auto json_element_array =
+      std::get<JsonElement::JsonArray>(json_element_str["animals"]->value_);
+  for (auto &i : json_element_array) {
+    std::cout << std::get<std::string>(i->value_) << std::endl;
+  }
 
   return 0;
 }
