@@ -21,6 +21,7 @@ JsonElement *parseValue();
 static auto source = R"(
 {
     "hello": "world",
+    "foo": 2.01
 }
 )";
 
@@ -83,11 +84,20 @@ void parseNull() {
   i++;
 }
 
-void parseNumber() {
-  while (source[i] != ',') {
+JsonElement *parseNumber() {
+  skipSpace();
+  std::string num = "";
+  int f = 1;
+  if (source[i] == '-') {
+    f = -1;
+    i++;
+  }
+  while (source[i] == '.' || (source[i] >= '0' && source[i] <= '9')) {
+    num += source[i];
     i++;
   }
   i++;
+  return new JsonElement(JsonElement::Type::NUMBER, std::stod(num) * f);
 }
 
 JsonElement *parseObject() {
@@ -98,11 +108,13 @@ JsonElement *parseObject() {
     i++;
   }
 
-  JsonElement *json_element = new JsonElement(JsonElement::Type::BEGIN_OBJECT,
-                                              JsonElement::JsonObject());
+  JsonElement *json_element =
+      new JsonElement(JsonElement::Type::OBJECT, JsonElement::JsonObject());
   while (source[i] != '}') {
     auto key = std::get<std::string>(parseString()->value_);
     auto value = parseValue();
+    // std::cout << key << " " << std::get<std::string>(value->value_)
+    //           << std::endl;
     std::get<JsonElement::JsonObject>(json_element->value_)[key] = value;
     skipSpace();
   }
@@ -112,7 +124,9 @@ JsonElement *parseObject() {
 
 JsonElement *parseValue() {
   skipSpace();
-  //   std::cout << "source" << source[i] << std::endl;
+  if (source[i] == 2) {
+    return nullptr;
+  }
   switch (source[i]) {
   case '{':
     return parseObject();
@@ -121,7 +135,6 @@ JsonElement *parseValue() {
     break;
   case '"':
     return parseString();
-    break;
   // use multiple case values without using a break between them.
   case 't':
   case 'f':
@@ -130,15 +143,17 @@ JsonElement *parseValue() {
   case 'n':
     // return parseNull();
   default:
-    break;
-    // return parseNumber();
+    return parseNumber();
   }
+  return nullptr;
 }
 signed main() {
-  //   std::cout << source << std::endl;
   JsonElement *json_element = parseValue();
-  //   std::cout <<
-  //   std::get<JsonElement::JsonObject>(json_element->value_)["hello"]
-  //             << std::endl;
+  auto json_element_str =
+      std::get<JsonElement::JsonObject>(json_element->value_);
+  std::cout << std::get<std::string>(json_element_str["hello"]->value_)
+            << std::endl;
+  auto json_element_num = json_element_str["foo"];
+  std::cout << std::get<double>(json_element_num->value_) << std::endl;
   return 0;
 }

@@ -6,16 +6,7 @@ public:
   using JsonArray = std::vector<JsonElement *>;
   using JsonObject = std::map<std::string, JsonElement *>;
 
-  enum Type {
-    BEGIN_ARRAY,
-    END_ARRAY,
-    BEGIN_OBJECT,
-    END_OBJECT,
-    STRING,
-    NUMBER,
-    BOOLEAN,
-    NULL_VALUE
-  };
+  enum Type { ARRAY, OBJECT, STRING, NUMBER, BOOLEAN, NULL_VALUE };
 
   Type type_;
   std::variant<JsonArray, JsonObject, std::string, double, bool> value_;
