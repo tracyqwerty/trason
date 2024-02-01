@@ -4,5 +4,5 @@
 -pthread: Google Test needs this flag for threading support.
 -o test_json: This specifies the output file name for the compiled executable.
 
-g++ -std=c++17 -Igoogletest/googletest/include test/test_json.cpp -lgtest -lgtest_main -pthread -o test_json
+g++ -std=c++17 -Igoogletest/googletest/include test/test_token.cpp -lgtest -lgtest_main -pthread -o test_token
 
