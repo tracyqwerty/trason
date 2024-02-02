@@ -1,9 +1,5 @@
-#include "json_element.h"
-#include "token.h"
-#include <iostream>
-#include <sstream>
-#include <string>
-#include <vector>
+#include "parser.h"
+
 // A raw string literal starts with R"( followed by a delimiter (which can be
 // empty), the raw string content, the same delimiter, and finally )". The
 // delimiter can be any sequence of characters and is used to allow the raw
@@ -17,7 +13,8 @@
 // 2. You can format the JSON content in a way that's easy to read, including
 // newlines and indentation, without cluttering the string with escape
 // sequences.
-JsonElement *parseValue();
+
+// use static to make source internal linkage
 static auto source = R"(
 {
     "hello": "world",
@@ -33,188 +30,29 @@ static auto source = R"(
 }
 )";
 
-// "hello": "world",
-// "foo" : 2.01,
-// "urgent": true,
-// "expensive" : False
-// "foo": 1.0,
-// "bar": true,
-// "baz": null
-static int i = 0;
-
-void skipSpace() {
-  // warning: can ':' and ',' be skipped?
-  while (source[i] == ' ' || source[i] == '\n' || source[i] == '\t' ||
-         source[i] == ':' || source[i] == ',') {
-    i++;
-  }
-}
-
-bool checkError(char c) {
-  if (source[i] != c) {
-    std::cout << "error for " << c << std::endl;
-    return false;
-  }
-  return true;
-}
-
-JsonElement *parseArray() {
-  skipSpace();
-  if (!checkError('[')) {
-    return nullptr;
-  } else {
-    i++;
-  }
-
-  JsonElement *json_element =
-      new JsonElement(JsonElement::Type::ARRAY, JsonElement::JsonArray());
-
-  while (source[i] != ']') {
-    auto value = parseValue();
-    std::get<JsonElement::JsonArray>(json_element->value_).emplace_back(value);
-    skipSpace();
-  }
-  i++;
-
-  return json_element;
-}
-
-JsonElement *parseString() {
-  std::string str = "";
-  skipSpace();
-  if (!checkError('"')) {
-    return nullptr;
-  } else {
-    i++;
-  }
-  while (source[i] != '"') {
-    str += source[i];
-    i++;
-  }
-  i++;
-  //   std::cout << str << std::endl;
-  return new JsonElement(JsonElement::Type::STRING, str);
-}
-
-JsonElement *parseBoolean() {
-  skipSpace();
-  std::string str;
-  str += source[i++];
-  while (source[i] >= 'a' && source[i] <= 'z') {
-    str += source[i];
-    i++;
-  }
-  // std::cout << str << std::endl;
-  i++;
-  if (str == "true" || str == "True") {
-    return new JsonElement(JsonElement::Type::BOOLEAN, true);
-  } else if (str == "false" || str == "False") {
-    return new JsonElement(JsonElement::Type::BOOLEAN, false);
-  } else {
-    std::cout << "bad input" << std::endl;
-    return nullptr;
-  }
-}
-
-JsonElement *parseNull() {
-  skipSpace();
-  std::string str;
-  str += source[i++];
-  while (source[i] >= 'a' && source[i] <= 'z') {
-    str += source[i];
-    i++;
-  }
-  // std::cout << str << std::endl;
-  i++;
-  if (str == "null" || str == "NULL") {
-    return new JsonElement(JsonElement::Type::NULL_VALUE, false);
-  } else {
-    std::cout << "bad input" << std::endl;
-    return nullptr;
-  }
-}
-
-JsonElement *parseNumber() {
-  skipSpace();
-  std::string num = "";
-  int f = 1;
-  if (source[i] == '-') {
-    f = -1;
-    i++;
-  }
-  while (source[i] == '.' || (source[i] >= '0' && source[i] <= '9')) {
-    num += source[i];
-    i++;
-  }
-  i++;
-  return new JsonElement(JsonElement::Type::NUMBER, std::stod(num) * f);
-}
-
-JsonElement *parseObject() {
-  skipSpace();
-  if (!checkError('{')) {
-    return nullptr;
-  } else {
-    i++;
-  }
-
-  JsonElement *json_element =
-      new JsonElement(JsonElement::Type::OBJECT, JsonElement::JsonObject());
-
-  while (source[i] != '}') {
-    auto key = std::get<std::string>(parseString()->value_);
-    // std::cout << "key is:" << key;
-    auto value = parseValue();
-    // std::cout << std::get<std::string>(value->value_) << std::endl;
-    // std::cout << std::get<bool>(value->value_) << std::endl;
-    std::get<JsonElement::JsonObject>(json_element->value_)[key] = value;
-    skipSpace();
-  }
-  i++;
-
-  return json_element;
-}
-
-JsonElement *parseValue() {
-  skipSpace();
-  switch (source[i]) {
-  case '{':
-    return parseObject();
-  case '[':
-    return parseArray();
-  case '"':
-    return parseString();
-  // use multiple case values without using a break between them.
-  case 't':
-  case 'T':
-  case 'f':
-  case 'F':
-    return parseBoolean();
-  case 'n':
-  case 'N':
-    return parseNull();
-  default:
-    return parseNumber();
-  }
-  return nullptr;
-}
 signed main() {
-  JsonElement *json_element = parseValue();
-  auto json_element_str =
+  Parser parse(source);
+  JsonElement *json_element = parse.parse();
+  auto json_element_obj =
       std::get<JsonElement::JsonObject>(json_element->value_);
-  std::cout << std::get<std::string>(json_element_str["hello"]->value_)
-            << std::endl;
-  auto json_element_num = json_element_str["foo"];
-  std::cout << std::get<double>(json_element_num->value_) << std::endl;
-  auto json_element_true = json_element_str["urgent"];
-  std::cout << std::get<bool>(json_element_true->value_) << std::endl;
-  auto json_element_false = json_element_str["expensive"];
-  std::cout << std::get<bool>(json_element_false->value_) << std::endl;
-  auto json_element_null = json_element_str["bazzzz"];
-  std::cout << std::get<bool>(json_element_null->value_) << std::endl;
 
+  // test string
+  std::cout << std::get<std::string>(json_element_obj["hello"]->value_)
+            << std::endl;
+  // test number
+  auto json_element_num = json_element_obj["foo"];
+  std::cout << std::get<double>(json_element_num->value_) << std::endl;
+  // test boolean
+  auto json_element_true = json_element_obj["urgent"];
+  std::cout << std::get<bool>(json_element_true->value_) << std::endl;
+  auto json_element_false = json_element_obj["expensive"];
+  std::cout << std::get<bool>(json_element_false->value_) << std::endl;
+  // test null
+  auto json_element_null = json_element_obj["bazzzz"];
+  std::cout << std::get<bool>(json_element_null->value_) << std::endl;
+  // test array
   auto json_element_array =
-      std::get<JsonElement::JsonArray>(json_element_str["animals"]->value_);
+      std::get<JsonElement::JsonArray>(json_element_obj["animals"]->value_);
   for (auto &i : json_element_array) {
     std::cout << std::get<std::string>(i->value_) << std::endl;
   }
